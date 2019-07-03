@@ -1,0 +1,6 @@
+{
+	"touch": false,
+	"touchDevice": "/dev/input/event8",
+	"touchMaxX": 4096,
+	"touchMaxY": 4096
+}
