@@ -5,8 +5,11 @@ import time
 
 from common.Config import Config
 from common.Button import Button
+from common.Timer import Timer
 
 CONFIG_FILENAME = 'assets/config/config.json'
+MAGNIFIER_BUTTON_POSITION = (42, 857)
+IDLE_TIME = 10
 
 from ft5406 import Touchscreen, TS_PRESS, TS_RELEASE, TS_MOVE
 
@@ -15,7 +18,9 @@ class Leonardo:
 		pass
 
 	def start(self):
+		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 		self.blitCursor = True
+		self.isMagnifying = False
 		self.config = Config(CONFIG_FILENAME)
 
 		self.touchScreenBounds = (self.config.getTouchScreenMaxX(), self.config.getTouchScreenMaxY())
@@ -53,30 +58,55 @@ class Leonardo:
 			None, None, None, None, self.onPrevClick)
 		self.buttons.append(self.prevButton)
 
-		self.nextButton = Button(self.screen, pygame.Rect(1800, 1080 // 2 - 102 // 2, 56, 102), 
+		self.nextButton = Button(self.screen, pygame.Rect(1760, 1080 // 2 - 102 // 2, 56, 102), 
 			pygame.image.load('assets/images/right_regular.png'), pygame.image.load('assets/images/right_selected.png'), 
 			None, None, None, None, self.onNextClick)
 		self.buttons.append(self.nextButton)
 
+		self.magnifierOff = pygame.image.load('assets/images/magnifier_off.png')
+		self.magnifierOn = pygame.image.load('assets/images/magnifier_on.png')
+		self.magnifierButton = self.magnifierOff
+
 		self.loop()
+
+	def onIdle(self):
+		self.isMagnifying = False
+		self.updateMagnifierButton()
+		self.currIndex = 0
+		self.loadImage()
 
 	def loadImage(self):
 		self.currImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '.png')
 		self.currZoomImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '-big.png')
+		self.zoomFactor = self.currZoomImage.get_width() / self.currImage.get_width()
 
 	def onNextClick(self):
+		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 		self.currIndex = (self.currIndex + 1) % self.totalImagesNum
 		self.loadImage()
 
 	def onPrevClick(self):
+		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 		self.currIndex = (self.currIndex - 1) % self.totalImagesNum
 		self.loadImage()
+
+	def toggleMagnifier(self):
+		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
+		self.isMagnifying = not self.isMagnifying
+		self.updateMagnifierButton()
+	
+	def updateMagnifierButton(self):
+		self.magnifierButton = self.magnifierOn if self.isMagnifying else self.magnifierOff
 
 	def onMouseDown(self, pos):
 		for button in self.buttons:
 			button.onMouseDown(pos)
 
+		if Rect(MAGNIFIER_BUTTON_POSITION[0], MAGNIFIER_BUTTON_POSITION[1], self.magnifierButton.get_width(), self.magnifierButton.get_height()).collidepoint(pos):
+			self.toggleMagnifier()
+
 		if Rect(self.magnifierPosition[0], self.magnifierPosition[1], self.magnifier.get_width(), self.magnifier.get_height()).collidepoint(pos):
+			self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 			self.dragStartPos = pos
 			self.magnifierStartPos = self.magnifierPosition
 
@@ -88,40 +118,39 @@ class Leonardo:
 
 	def onMouseMove(self, pos):
 		if self.dragStartPos is not None:
+			self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 			self.magnifierPosition = (pos[0] - self.dragStartPos[0] + self.magnifierStartPos[0], pos[1] - self.dragStartPos[1] + self.magnifierStartPos[1])
 
 	def draw(self, dt):
 		self.screen.blit(self.currImage, (0, 0))
 
-		factor = 2.0
-		magnifierCenterPos = self.config.getMagnifierImageCenterPos()
-		magnifierMidPos = (self.magnifierPosition[0] + magnifierCenterPos[0], self.magnifierPosition[1] + magnifierCenterPos[1])
-		midZoomPos = (magnifierMidPos[0] * factor, magnifierMidPos[1] * factor)
-		magnifierSize = self.config.getMagnifierSize()
+		if self.isMagnifying:
+			magnifierCenterPos = self.config.getMagnifierImageCenterPos()
+			magnifierMidPos = (self.magnifierPosition[0] + magnifierCenterPos[0], self.magnifierPosition[1] + magnifierCenterPos[1])
+			midZoomPos = (magnifierMidPos[0] * self.zoomFactor, magnifierMidPos[1] * self.zoomFactor)
+			magnifierSize = self.config.getMagnifierSize()
 
-		self.zoomRenderSurface.blit(self.currZoomImage, 
-			(0, 0),
-			Rect(midZoomPos[0] - magnifierSize[0] // 2, midZoomPos[1] - magnifierSize[1] // 2, magnifierSize[0], magnifierSize[1]))
+			self.zoomRenderSurface.blit(self.currZoomImage, 
+				(0, 0),
+				Rect(midZoomPos[0] - magnifierSize[0] // 2, midZoomPos[1] - magnifierSize[1] // 2, magnifierSize[0], magnifierSize[1]))
 
-		transparent = pygame.Color(0,0,0,0)
-		for i in range(125):
-			for j in range(125 - i):
-				self.zoomRenderSurface.set_at((i,j), transparent)
-				self.zoomRenderSurface.set_at((magnifierSize[0] - i,j), transparent)
-				self.zoomRenderSurface.set_at((i,magnifierSize[1] - j), transparent)
-				self.zoomRenderSurface.set_at((magnifierSize[0] - i,magnifierSize[1] - j), transparent)
+			transparent = pygame.Color(0,0,0,0)
+			for i in range(125):
+				for j in range(125 - i):
+					self.zoomRenderSurface.set_at((i,j), transparent)
+					self.zoomRenderSurface.set_at((magnifierSize[0] - i,j), transparent)
+					self.zoomRenderSurface.set_at((i,magnifierSize[1] - j), transparent)
+					self.zoomRenderSurface.set_at((magnifierSize[0] - i,magnifierSize[1] - j), transparent)
 
-		self.screen.blit(self.zoomRenderSurface, 
-			(self.magnifierPosition[0] + magnifierCenterPos[0] - magnifierSize[0] // 2, self.magnifierPosition[1] + magnifierCenterPos[1] - magnifierSize[1] // 2))
+			self.screen.blit(self.zoomRenderSurface, 
+				(self.magnifierPosition[0] + magnifierCenterPos[0] - magnifierSize[0] // 2, self.magnifierPosition[1] + magnifierCenterPos[1] - magnifierSize[1] // 2))
 
-		#self.screen.blit(self.currZoomImage, 
-			#(self.magnifierPosition[0] + magnifierCenterPos[0] - magnifierSize[0] // 2, self.magnifierPosition[1] + magnifierCenterPos[1] - magnifierSize[1] // 2), 
-			#Rect(midZoomPos[0] - magnifierSize[0] // 2, midZoomPos[1] - magnifierSize[1] // 2, magnifierSize[0], magnifierSize[1]))
-
-		self.screen.blit(self.magnifier, self.magnifierPosition)
+			self.screen.blit(self.magnifier, self.magnifierPosition)
 
 		for button in self.buttons:
 			button.draw()
+
+		self.screen.blit(self.magnifierButton, MAGNIFIER_BUTTON_POSITION)
 
 	def loop(self):
 		isGameRunning = True
@@ -149,6 +178,7 @@ class Leonardo:
 			lastTime = currTime
 
 			self.draw(dt / 1000)
+			self.idleTimer.tick(dt / 1000)
 
 			if not self.config.isTouch() and self.blitCursor:
 				self.screen.blit(self.cursor, (pygame.mouse.get_pos()))
