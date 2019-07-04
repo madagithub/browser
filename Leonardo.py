@@ -25,6 +25,7 @@ class Leonardo:
 		pygame.mouse.set_visible(False)
 
 		self.screen = pygame.display.set_mode((1920, 1080), pygame.FULLSCREEN)
+		self.zoomRenderSurface = pygame.Surface(self.config.getMagnifierSize()).convert_alpha()
 		self.cursor = pygame.image.load('assets/images/cursor.png').convert_alpha()
 		self.magnifier = pygame.image.load('assets/images/magnifier.png').convert_alpha()
 		self.magnifierPosition = (0,0)
@@ -93,9 +94,29 @@ class Leonardo:
 		self.screen.blit(self.currImage, (0, 0))
 
 		factor = 2.0
-		magnifierMidPos = (self.magnifierPosition[0] + 210, self.magnifierPosition[1] + 210)
+		magnifierCenterPos = self.config.getMagnifierImageCenterPos()
+		magnifierMidPos = (self.magnifierPosition[0] + magnifierCenterPos[0], self.magnifierPosition[1] + magnifierCenterPos[1])
 		midZoomPos = (magnifierMidPos[0] * factor, magnifierMidPos[1] * factor)
-		self.screen.blit(self.currZoomImage, self.magnifierPosition, Rect(midZoomPos[0] - 210, midZoomPos[1] - 210, 420, 420))
+		magnifierSize = self.config.getMagnifierSize()
+
+		self.zoomRenderSurface.blit(self.currZoomImage, 
+			(0, 0),
+			Rect(midZoomPos[0] - magnifierSize[0] // 2, midZoomPos[1] - magnifierSize[1] // 2, magnifierSize[0], magnifierSize[1]))
+
+		transparent = pygame.Color(0,0,0,0)
+		for i in range(125):
+			for j in range(125 - i):
+				self.zoomRenderSurface.set_at((i,j), transparent)
+				self.zoomRenderSurface.set_at((magnifierSize[0] - i,j), transparent)
+				self.zoomRenderSurface.set_at((i,magnifierSize[1] - j), transparent)
+				self.zoomRenderSurface.set_at((magnifierSize[0] - i,magnifierSize[1] - j), transparent)
+
+		self.screen.blit(self.zoomRenderSurface, 
+			(self.magnifierPosition[0] + magnifierCenterPos[0] - magnifierSize[0] // 2, self.magnifierPosition[1] + magnifierCenterPos[1] - magnifierSize[1] // 2))
+
+		#self.screen.blit(self.currZoomImage, 
+			#(self.magnifierPosition[0] + magnifierCenterPos[0] - magnifierSize[0] // 2, self.magnifierPosition[1] + magnifierCenterPos[1] - magnifierSize[1] // 2), 
+			#Rect(midZoomPos[0] - magnifierSize[0] // 2, midZoomPos[1] - magnifierSize[1] // 2, magnifierSize[0], magnifierSize[1]))
 
 		self.screen.blit(self.magnifier, self.magnifierPosition)
 

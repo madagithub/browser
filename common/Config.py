@@ -17,3 +17,9 @@ class Config:
 
 	def getTouchScreenMaxY(self):
 		return self.config['touchMaxY']
+
+	def getMagnifierImageCenterPos(self):
+		return (self.config['magnifierImageCenterX'], self.config['magnifierImageCenterY'])
+
+	def getMagnifierSize(self):
+		return (self.config['magnifierWidth'], self.config['magnifierHeight'])

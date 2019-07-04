@@ -2,5 +2,9 @@
 	"touch": false,
 	"touchDevice": "/dev/input/event8",
 	"touchMaxX": 4096,
-	"touchMaxY": 4096
+	"touchMaxY": 4096,
+	"magnifierImageCenterX": 308,
+	"magnifierImageCenterY": 258,
+	"magnifierWidth": 431,
+	"magnifierHeight": 419
 }
