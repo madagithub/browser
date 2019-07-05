@@ -9,7 +9,7 @@ from common.Timer import Timer
 
 CONFIG_FILENAME = 'assets/config/config.json'
 MAGNIFIER_BUTTON_POSITION = (42, 857)
-IDLE_TIME = 10
+IDLE_TIME = 300
 
 from ft5406 import Touchscreen, TS_PRESS, TS_RELEASE, TS_MOVE
 
@@ -41,9 +41,9 @@ class Leonardo:
 			self.ts = Touchscreen(self.config.getTouchDevice())
 
 			for touch in self.ts.touches:
-			    touch.on_press = self.onMouseDown
-			    touch.on_release = self.onMouseUp
-			    touch.on_move = self.onMouseMove
+			    touch.on_press = self.onTouchDown
+			    touch.on_release = self.onTouchUp
+			    touch.on_move = self.onTouchMove
 
 			self.ts.run()
 
@@ -98,7 +98,29 @@ class Leonardo:
 	def updateMagnifierButton(self):
 		self.magnifierButton = self.magnifierOn if self.isMagnifying else self.magnifierOff
 
+	def onTouchDown(self, event, touch):
+		print("Down event!", touch.x, touch.y)
+		try:
+			self.onMouseDown((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
+		except Exception as e:
+			print(str(e))
+
+	def onTouchUp(self, event, touch):
+		print("Up event!", touch.x, touch.y)
+		try:
+			self.onMouseUp((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
+		except Exception as e:
+			print(str(e))
+
+	def onTouchMove(self, event, touch):
+		print("Move event!", touch.x, touch.y)
+		try:
+			self.onMouseMove((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
+		except Exception as e:
+			print(str(e))
+
 	def onMouseDown(self, pos):
+		print("Mouse down: ", pos)
 		for button in self.buttons:
 			button.onMouseDown(pos)
 
@@ -184,7 +206,7 @@ class Leonardo:
 				self.screen.blit(self.cursor, (pygame.mouse.get_pos()))
 
 			pygame.display.flip()
-			clock.tick(60)
+			clock.tick(10)
 
 		pygame.quit()
 
