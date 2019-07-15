@@ -128,8 +128,8 @@ class Leonardo:
 		self.loadImage()
 
 	def loadImage(self):
-		self.currImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '.png')
-		self.currZoomImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '-big.png')
+		self.currImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '.png').convert()
+		self.currZoomImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '-big.png').convert()
 		self.zoomFactor = self.currZoomImage.get_width() / self.currImage.get_width()
 
 	def onNextClick(self):
@@ -149,18 +149,6 @@ class Leonardo:
 	
 	def updateMagnifierButton(self):
 		self.magnifierButton = self.magnifierOn if self.isMagnifying else self.magnifierOff
-
-	def onTouchDown(self, event, touch):
-		print("Down event!", touch.x, touch.y)
-		self.onMouseDown((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
-
-	def onTouchUp(self, event, touch):
-		print("Up event!", touch.x, touch.y)
-		self.onMouseUp((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
-
-	def onTouchMove(self, event, touch):
-		print("Move event!", touch.x, touch.y)
-		self.onMouseMove((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
 
 	def onMouseDown(self, pos):
 		for button in self.buttons:
@@ -220,6 +208,7 @@ class Leonardo:
 		isGameRunning = True
 		clock = pygame.time.Clock()
 		lastTime = pygame.time.get_ticks()
+		font = pygame.font.Font(None, 30)
 
 		while isGameRunning:
 			for event in pygame.event.get():
@@ -250,8 +239,11 @@ class Leonardo:
 			if not self.config.isTouch() and self.blitCursor:
 				self.screen.blit(self.cursor, (pygame.mouse.get_pos()))
 
+			fps = font.render(str(int(clock.get_fps())), True, Color('white'))
+			self.screen.blit(fps, (50, 50))
+
 			pygame.display.flip()
-			clock.tick(10)
+			clock.tick(60)
 
 		pygame.quit()
 
