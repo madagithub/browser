@@ -3,6 +3,14 @@ from pygame.locals import *
 
 import time
 
+import platform
+
+if platform.system() == 'Linux':
+	import evdev
+	from evdev import InputDevice, categorize, ecodes
+
+from threading import Thread
+
 from common.Config import Config
 from common.Button import Button
 from common.Timer import Timer
@@ -15,7 +23,7 @@ from ft5406 import Touchscreen, TS_PRESS, TS_RELEASE, TS_MOVE
 
 class Leonardo:
 	def __init__(self):
-		pass
+		self.touchPos = (0,0)
 
 	def start(self):
 		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
@@ -38,14 +46,7 @@ class Leonardo:
 
 		if self.config.isTouch():
 			print("Loading touch screen...")
-			self.ts = Touchscreen(self.config.getTouchDevice())
-
-			for touch in self.ts.touches:
-			    touch.on_press = self.onTouchDown
-			    touch.on_release = self.onTouchUp
-			    touch.on_move = self.onTouchMove
-
-			self.ts.run()
+			self.setupTouchScreen()
 
 		self.totalImagesNum = 21
 		self.currIndex = 0
@@ -68,6 +69,57 @@ class Leonardo:
 		self.magnifierButton = self.magnifierOff
 
 		self.loop()
+
+	def setupTouchScreen(self):
+		self.device = evdev.InputDevice(self.config.getTouchDevice())
+		self.readTouchThread = Thread(target=self.readTouch, args=())
+		self.readTouchThread.daemon = True
+		self.readTouchThread.start()
+
+	def readTouch(self):
+		print('THREAD UP!!!!')
+
+		try:
+			currX = 0
+			currY = 0
+
+			coordinatesChanged = 0
+
+			isUp = False
+			isDown = False
+
+			# TODO: Change to read_one and alow thread to exit when marked
+			for event in self.device.read_loop():
+				if event.type == ecodes.SYN_REPORT:
+					pos = (int(currX * 1920 / self.touchScreenBounds[0]), int(currY * 1080 / self.touchScreenBounds[1]))
+					if isUp:
+						print("UP!", pos)
+						self.onMouseUp(pos)
+					elif isDown:
+						print("DOWN!", pos)
+						self.onMouseDown(pos)
+					else:
+						self.touchPos = pos
+
+					isUp = False
+					isDown = False
+
+				if event.type == ecodes.EV_KEY:
+					keyEvent = categorize(event)
+					if keyEvent.keycode[0] == 'BTN_LEFT' or keyEvent.keycode == 'BTN_TOUCH':
+						if keyEvent.keystate == keyEvent.key_up:
+							isUp = True
+						elif keyEvent.keystate == keyEvent.key_down:
+							isDown = True
+				elif event.type == ecodes.EV_ABS:
+					absEvent = categorize(event)
+
+					if absEvent.event.code == 0:
+						currX = absEvent.event.value
+					elif absEvent.event.code == 1:
+						currY = absEvent.event.value
+		except e:
+			print(str(e))
 
 	def onIdle(self):
 		self.isMagnifying = False
@@ -100,27 +152,17 @@ class Leonardo:
 
 	def onTouchDown(self, event, touch):
 		print("Down event!", touch.x, touch.y)
-		try:
-			self.onMouseDown((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
-		except Exception as e:
-			print(str(e))
+		self.onMouseDown((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
 
 	def onTouchUp(self, event, touch):
 		print("Up event!", touch.x, touch.y)
-		try:
-			self.onMouseUp((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
-		except Exception as e:
-			print(str(e))
+		self.onMouseUp((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
 
 	def onTouchMove(self, event, touch):
 		print("Move event!", touch.x, touch.y)
-		try:
-			self.onMouseMove((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
-		except Exception as e:
-			print(str(e))
+		self.onMouseMove((int(touch.x * 1920 / self.touchScreenBounds[0]), int(touch.y * 1080 / self.touchScreenBounds[1])))
 
 	def onMouseDown(self, pos):
-		print("Mouse down: ", pos)
 		for button in self.buttons:
 			button.onMouseDown(pos)
 
@@ -187,12 +229,15 @@ class Leonardo:
 				elif event.type == MOUSEBUTTONUP:
 					if not self.config.isTouch():
 						self.onMouseUp(event.pos)
-				elif event.type == MOUSEMOTION:
-					if not self.config.isTouch():
-						self.onMouseMove(event.pos)
 				elif event.type == KEYDOWN:
 					if event.key == K_ESCAPE:
 						isGameRunning = False
+
+			if not self.config.isTouch():
+				self.onMouseMove(pygame.mouse.get_pos())
+			else:
+				pos = self.touchPos
+				self.onMouseMove(pos)
 
 			self.screen.fill([0,0,0])
 			currTime = pygame.time.get_ticks()
@@ -209,9 +254,6 @@ class Leonardo:
 			clock.tick(10)
 
 		pygame.quit()
-
-		if self.config.isTouch():
-			self.ts.stop()
 
 if __name__ == '__main__':
 	Leonardo().start()
