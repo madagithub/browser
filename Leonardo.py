@@ -14,6 +14,7 @@ from threading import Thread
 from common.Config import Config
 from common.Button import Button
 from common.Timer import Timer
+from common.TouchScreen import TouchScreen
 
 CONFIG_FILENAME = 'assets/config/config.json'
 MAGNIFIER_BUTTON_POSITION = (42, 857)
@@ -31,8 +32,6 @@ class Leonardo:
 		self.isMagnifying = False
 		self.config = Config(CONFIG_FILENAME)
 
-		self.touchScreenBounds = (self.config.getTouchScreenMaxX(), self.config.getTouchScreenMaxY())
-
 		pygame.mixer.pre_init(44100, -16, 1, 512)
 		pygame.init()
 		pygame.mouse.set_visible(False)
@@ -44,11 +43,21 @@ class Leonardo:
 		self.magnifierPosition = (0,0)
 		self.dragStartPos = None
 
+		self.touchScreen = None
 		if self.config.isTouch():
 			print("Loading touch screen...")
-			self.setupTouchScreen()
+			self.touchScreen = TouchScreen(self.config.getTouchDevicePartialName(), (self.config.getTouchScreenMaxX(), self.config.getTouchScreenMaxY()))
+
+			if not self.touchScreen.setup():
+				self.config.setTouch(False)
 
 		self.totalImagesNum = 21
+		self.images = []
+		self.zoomImages = []
+		for i in range(self.totalImagesNum):
+			self.images.append(pygame.image.load('assets/images/' + str(i + 1) + '.png').convert())
+			self.zoomImages.append(pygame.image.load('assets/images/' + str(i + 1) + '-big.png').convert())
+
 		self.currIndex = 0
 		self.loadImage()
 
@@ -70,57 +79,6 @@ class Leonardo:
 
 		self.loop()
 
-	def setupTouchScreen(self):
-		self.device = evdev.InputDevice(self.config.getTouchDevice())
-		self.readTouchThread = Thread(target=self.readTouch, args=())
-		self.readTouchThread.daemon = True
-		self.readTouchThread.start()
-
-	def readTouch(self):
-		print('THREAD UP!!!!')
-
-		try:
-			currX = 0
-			currY = 0
-
-			coordinatesChanged = 0
-
-			isUp = False
-			isDown = False
-
-			# TODO: Change to read_one and alow thread to exit when marked
-			for event in self.device.read_loop():
-				if event.type == ecodes.SYN_REPORT:
-					pos = (int(currX * 1920 / self.touchScreenBounds[0]), int(currY * 1080 / self.touchScreenBounds[1]))
-					if isUp:
-						print("UP!", pos)
-						self.onMouseUp(pos)
-					elif isDown:
-						print("DOWN!", pos)
-						self.onMouseDown(pos)
-					else:
-						self.touchPos = pos
-
-					isUp = False
-					isDown = False
-
-				if event.type == ecodes.EV_KEY:
-					keyEvent = categorize(event)
-					if keyEvent.keycode[0] == 'BTN_LEFT' or keyEvent.keycode == 'BTN_TOUCH':
-						if keyEvent.keystate == keyEvent.key_up:
-							isUp = True
-						elif keyEvent.keystate == keyEvent.key_down:
-							isDown = True
-				elif event.type == ecodes.EV_ABS:
-					absEvent = categorize(event)
-
-					if absEvent.event.code == 0:
-						currX = absEvent.event.value
-					elif absEvent.event.code == 1:
-						currY = absEvent.event.value
-		except e:
-			print(str(e))
-
 	def onIdle(self):
 		self.isMagnifying = False
 		self.updateMagnifierButton()
@@ -128,8 +86,8 @@ class Leonardo:
 		self.loadImage()
 
 	def loadImage(self):
-		self.currImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '.png').convert()
-		self.currZoomImage = pygame.image.load('assets/images/' + str(self.currIndex + 1) + '-big.png').convert()
+		self.currImage = self.images[self.currIndex]
+		self.currZoomImage = self.zoomImages[self.currIndex]
 		self.zoomFactor = self.currZoomImage.get_width() / self.currImage.get_width()
 
 	def onNextClick(self):
@@ -222,10 +180,19 @@ class Leonardo:
 					if event.key == K_ESCAPE:
 						isGameRunning = False
 
+			if self.config.isTouch():
+				event = self.touchScreen.readUpDownEvent()
+				while event is not None:
+					if event['type'] == TouchScreen.DOWN_EVENT:
+						self.onMouseDown(event['pos'])
+					elif event['type'] == Touchscreen.UP_EVENT:
+						self.onMouseUp(event['pos'])
+					event = self.touchScreen.readUpDownEvent()
+
 			if not self.config.isTouch():
 				self.onMouseMove(pygame.mouse.get_pos())
 			else:
-				pos = self.touchPos
+				pos = self.touchScreen.getPosition()
 				self.onMouseMove(pos)
 
 			self.screen.fill([0,0,0])

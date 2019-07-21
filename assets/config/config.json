@@ -1,6 +1,6 @@
 {
 	"touch": true,
-	"touchDevice": "/dev/input/event5",
+	"touchDeviceName": "Touch",
 	"touchMaxX": 4096,
 	"touchMaxY": 4096,
 	"magnifierImageCenterX": 308,

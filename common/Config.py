@@ -9,8 +9,11 @@ class Config:
 	def isTouch(self):
 		return self.config['touch']
 
-	def getTouchDevice(self):
-		return self.config['touchDevice']
+	def setTouch(self, value):
+		self.config['touch'] = value
+
+	def getTouchDevicePartialName(self):
+		return self.config['touchDeviceName']
 
 	def getTouchScreenMaxX(self):
 		return self.config['touchMaxX']
