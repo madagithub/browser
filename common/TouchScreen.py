@@ -1,5 +1,6 @@
 import platform
 from queue import Queue
+from threading import Thread
 
 if platform.system() == 'Linux':
 	import evdev
@@ -18,19 +19,21 @@ class TouchScreen:
 		self.readTouchThread = None
 
 	def setup(self):
+		print(platform.system())
 		if platform.system() != 'Linux':
 			return False
 
-		name = self.config.getTouchDeviceName()
 		devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
-		device = None
+		devicePath = None
 		for device in devices:
-			if device.name.includes(name):
-				device = device.path
+			print (device.name)
+			if self.touchPartialName in device.name:
+				devicePath = device.path
 				break
 
-		if device is not None:
-			self.device = evdev.InputDevice(device)
+		if devicePath is not None:
+			print("Path: ", devicePath)
+			self.device = evdev.InputDevice(devicePath)
 			self.readTouchThread = Thread(target=self.readTouch, args=())
 			self.readTouchThread.daemon = True
 			self.readTouchThread.start()
