@@ -206,8 +206,9 @@ class Leonardo:
 			if not self.config.isTouch() and self.blitCursor:
 				self.screen.blit(self.cursor, (pygame.mouse.get_pos()))
 
-			fps = font.render(str(int(clock.get_fps())), True, Color('white'))
-			self.screen.blit(fps, (50, 50))
+			if self.config.showFPS():
+				fps = font.render(str(int(clock.get_fps())), True, Color('white'))
+				self.screen.blit(fps, (50, 50))
 
 			pygame.display.flip()
 			clock.tick(60)

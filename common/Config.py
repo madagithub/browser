@@ -26,3 +26,6 @@ class Config:
 
 	def getMagnifierSize(self):
 		return (self.config['magnifierWidth'], self.config['magnifierHeight'])
+
+	def showFPS(self):
+		return (self.config['showFPS'])
