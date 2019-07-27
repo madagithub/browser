@@ -24,6 +24,9 @@ class Config:
 	def getMagnifierImageCenterPos(self):
 		return (self.config['magnifierImageCenterX'], self.config['magnifierImageCenterY'])
 
+	def getMagnifierInitialPosition(self):
+		return (self.config['magnifierInitialPositionX'], self.config['magnifierInitialPositionY'])
+
 	def getMagnifierSize(self):
 		return (self.config['magnifierWidth'], self.config['magnifierHeight'])
 

@@ -7,5 +7,7 @@
 	"magnifierImageCenterY": 258,
 	"magnifierWidth": 431,
 	"magnifierHeight": 419,
+	"magnifierInitialPositionX": 250,
+	"magnifierInitialPositionY": 250,
 	"showFPS": false
 }
