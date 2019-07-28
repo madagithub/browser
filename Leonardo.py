@@ -202,7 +202,7 @@ class Leonardo:
 				while event is not None:
 					if event['type'] == TouchScreen.DOWN_EVENT:
 						self.onMouseDown(event['pos'])
-					elif event['type'] == Touchscreen.UP_EVENT:
+					elif event['type'] == TouchScreen.UP_EVENT:
 						self.onMouseUp(event['pos'])
 					event = self.touchScreen.readUpDownEvent()
 
