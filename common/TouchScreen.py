@@ -26,8 +26,8 @@ class TouchScreen:
 		devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
 		devicePath = None
 		for device in devices:
-			print (device.name)
 			if self.touchPartialName in device.name:
+				print (device.name)
 				devicePath = device.path
 				break
 
@@ -66,9 +66,9 @@ class TouchScreen:
 				if event.type == ecodes.SYN_REPORT:
 					pos = (int(currX * 1920 / self.touchScreenBounds[0]), int(currY * 1080 / self.touchScreenBounds[1]))
 					if isUp:
-						self.eventQueue.push({'type': UP_EVENT, 'pos': pos})
+						self.eventQueue.put({'type': self.UP_EVENT, 'pos': pos})
 					elif isDown:
-						self.eventQueue.push({'type': DOWN_EVENT, 'pos': pos})
+						self.eventQueue.put({'type': self.DOWN_EVENT, 'pos': pos})
 					else:
 						self.touchPos = pos
 
