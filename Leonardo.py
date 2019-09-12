@@ -15,18 +15,22 @@ from common.Config import Config
 from common.Button import Button
 from common.Timer import Timer
 from common.TouchScreen import TouchScreen
+from common.Log import Log
 
 CONFIG_FILENAME = 'assets/config/config.json'
 MAGNIFIER_BUTTON_POSITION = (42, 857)
 IDLE_TIME = 300
 
-from ft5406 import Touchscreen, TS_PRESS, TS_RELEASE, TS_MOVE
+LOG_FILE_PATH = 'browser.log'
 
 class Leonardo:
 	def __init__(self):
 		self.touchPos = (0,0)
 
 	def start(self):
+		Log.init(LOG_FILE_PATH)
+		Log.getLogger().info('START')
+
 		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 		self.blitCursor = True
 		self.isMagnifying = False
@@ -63,23 +67,28 @@ class Leonardo:
 
 		self.buttons = []
 
-		self.prevButton = Button(self.screen, pygame.Rect(70, 1080 // 2 - 102 // 2, 56, 102), 
-			pygame.image.load('assets/images/left_regular.png'), pygame.image.load('assets/images/left_selected.png'), 
-			None, None, None, None, self.onPrevClick)
+		leftRegular = pygame.image.load('assets/images/left_regular.png')
+		self.prevButton = Button(self.screen, pygame.Rect(70, 1080 // 2 - leftRegular.get_height() // 2, leftRegular.get_width(), leftRegular.get_height()), 
+			leftRegular, pygame.image.load('assets/images/left_selected.png'), 
+			None, None, None, None, self.onPrevClick, 2.0)
 		self.buttons.append(self.prevButton)
 
-		self.nextButton = Button(self.screen, pygame.Rect(1760, 1080 // 2 - 102 // 2, 56, 102), 
-			pygame.image.load('assets/images/right_regular.png'), pygame.image.load('assets/images/right_selected.png'), 
-			None, None, None, None, self.onNextClick)
+		rightRegular = pygame.image.load('assets/images/right_regular.png')
+		self.nextButton = Button(self.screen, pygame.Rect(1760, 1080 // 2 - rightRegular.get_height() // 2, rightRegular.get_width(), rightRegular.get_height()), 
+			rightRegular, pygame.image.load('assets/images/right_selected.png'), 
+			None, None, None, None, self.onNextClick, 2.0)
 		self.buttons.append(self.nextButton)
 
 		self.magnifierOff = pygame.image.load('assets/images/magnifier_off.png')
 		self.magnifierOn = pygame.image.load('assets/images/magnifier_on.png')
 		self.magnifierButton = self.magnifierOff
 
+		Log.getLogger().info('INIT')
+
 		self.loop()
 
 	def onIdle(self):
+		Log.getLogger().info('IDLE')
 		self.magnifierPosition = self.config.getMagnifierInitialPosition()
 		self.isMagnifying = False
 		self.updateMagnifierButton()
@@ -95,15 +104,18 @@ class Leonardo:
 		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 		self.currIndex = (self.currIndex + 1) % self.totalImagesNum
 		self.loadImage()
+		Log.getLogger().info('NEXT,' + str(self.currIndex + 1))
 
 	def onPrevClick(self):
 		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 		self.currIndex = (self.currIndex - 1) % self.totalImagesNum
 		self.loadImage()
+		Log.getLogger().info('PREV,' + str(self.currIndex + 1))
 
 	def toggleMagnifier(self):
 		self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 		self.isMagnifying = not self.isMagnifying
+		Log.getLogger().info('MAGNIFIER_ON' if self.isMagnifying else 'MAGNIFIER_OFF')
 		self.updateMagnifierButton()
 	
 	def updateMagnifierButton(self):
@@ -113,18 +125,21 @@ class Leonardo:
 		for button in self.buttons:
 			button.onMouseDown(pos)
 
-		if Rect(MAGNIFIER_BUTTON_POSITION[0], MAGNIFIER_BUTTON_POSITION[1], self.magnifierButton.get_width(), self.magnifierButton.get_height()).collidepoint(pos):
+		if Rect(MAGNIFIER_BUTTON_POSITION[0] - self.magnifierButton.get_width() // 4, MAGNIFIER_BUTTON_POSITION[1] - self.magnifierButton.get_height() // 4, self.magnifierButton.get_width() * 1.5, self.magnifierButton.get_height() * 1.5).collidepoint(pos):
 			self.toggleMagnifier()
 
 		if Rect(self.magnifierPosition[0], self.magnifierPosition[1], self.magnifier.get_width(), self.magnifier.get_height()).collidepoint(pos):
 			self.idleTimer = Timer(IDLE_TIME, self.onIdle)
 			self.dragStartPos = pos
 			self.magnifierStartPos = self.magnifierPosition
+			Log.getLogger().info('MAGNIFIER_MOVE_START,' + str(pos[0]) + ',' + str(pos[1]))
 
 	def onMouseUp(self, pos):
 		for button in self.buttons:
 			button.onMouseUp(pos)
 
+		if self.dragStartPos is not None:
+			Log.getLogger().info('MAGNIFIER_MOVE_END,' + str(pos[0]) + ',' + str(pos[1]))
 		self.dragStartPos = None
 
 	def onMouseMove(self, pos):
