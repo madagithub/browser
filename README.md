@@ -84,3 +84,5 @@ The exhibit supports a rotating log named browser.log in the root directory, tha
 * MAGNIFIER_OFF (magnifier was turned off)
 * MAGNIFIER_MOVE_START,X,Y (magnifier drag has started at point x,y)
 * MAGNIFIER_MOVE_END,X,Y (magnifier drag has ended at point x,y)
+
+Each event will be prefixed by a timestamp (year-month-day hour:minute:seconds.mili with year as 4 digit, all rest as 2 digit and milliseconds as 3 digits) then a comma, following the event as specified above.
